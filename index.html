@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResearchMate — AI Research Assistant</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#fafaf8;--bg-w:#f5f3ef;--bg-c:#ffffff;
+  --border:#e8e4dc;--border-d:#d4cfc5;
+  --text:#1a1814;--tm:#6b6560;--tl:#9b958e;--ts:#c8c3ba;
+  --acc:#1a4480;--ad:rgba(26,68,128,0.07);--ab:rgba(26,68,128,0.15);
+  --warm:#b85c2c;--wd:rgba(184,92,44,0.08);
+  --green:#1a6e3c;--gd:rgba(26,110,60,0.08);
+  --red:#c0392b;--rd:rgba(192,57,43,0.07);
+  --sh:0 1px 4px rgba(0,0,0,0.06);
+  --sh-md:0 4px 24px rgba(0,0,0,0.08);
+  --sh-lg:0 8px 48px rgba(0,0,0,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.018'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
+.serif{font-family:'Lora',Georgia,serif}
+.mono{font-family:'DM Mono',monospace}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:200;background:rgba(250,250,248,0.94);border-bottom:1px solid var(--border);backdrop-filter:blur(16px)}
+
+/* PAGES */
+.pg{display:none}.pg.on{display:block;animation:fu .4s ease both}
+.pgc{display:none}.pgc.on{display:flex;animation:fu .4s ease both}
+@keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes sp{to{transform:rotate(360deg)}}
+@keyframes pl{0%,100%{opacity:1}50%{opacity:.4}}
+.d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}.d4{animation-delay:.24s}
+
+/* CARDS */
+.card{background:var(--bg-c);border:1px solid var(--border);border-radius:12px;box-shadow:var(--sh)}
+.card-h:hover{box-shadow:var(--sh-md);border-color:var(--border-d)}
+
+/* BUTTONS */
+.btn{font-family:'DM Sans',sans-serif;font-weight:600;border:none;cursor:pointer;border-radius:8px;transition:all .18s;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.btn-p{background:var(--acc);color:#fff;padding:12px 24px;font-size:14px;box-shadow:0 2px 12px rgba(26,68,128,0.2)}
+.btn-p:hover{background:#163872;transform:translateY(-1px);box-shadow:0 4px 20px rgba(26,68,128,0.3)}
+.btn-p:active{transform:translateY(0)}
+.btn-p:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-o{background:transparent;border:1px solid var(--border-d);color:var(--tm);padding:10px 18px;font-size:13px}
+.btn-o:hover{border-color:var(--acc);color:var(--acc);background:var(--ad)}
+.btn-sm{padding:7px 13px;font-size:12px}
+
+/* SECTION EXTRACT BUTTONS */
+.sec-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:11px 16px;border-radius:10px;
+  border:1px solid var(--border);background:var(--bg-c);
+  cursor:pointer;transition:all .18s;width:100%;text-align:left;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--text);
+}
+.sec-btn:hover{border-color:var(--acc);background:var(--ad);color:var(--acc)}
+.sec-btn.active{border-color:var(--acc);background:var(--acc);color:#fff}
+.sec-btn.active .sec-btn-ic{background:rgba(255,255,255,0.2);color:#fff}
+.sec-btn.loading{opacity:.7;cursor:not-allowed}
+.sec-btn-ic{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;transition:all .18s}
+
+/* SLIDE-OUT PANEL */
+.panel-overlay{
+  position:fixed;inset:0;background:rgba(26,24,20,0.3);
+  z-index:300;opacity:0;pointer-events:none;
+  transition:opacity .3s ease;backdrop-filter:blur(2px);
+}
+.panel-overlay.open{opacity:1;pointer-events:all}
+
+.panel{
+  position:fixed;top:0;right:0;bottom:0;
+  width:min(560px,95vw);
+  background:var(--bg-c);
+  border-left:1px solid var(--border);
+  z-index:301;
+  transform:translateX(100%);
+  transition:transform .35s cubic-bezier(.22,1,.36,1);
+  display:flex;flex-direction:column;
+  box-shadow:var(--sh-lg);
+}
+.panel.open{transform:translateX(0)}
+
+.panel-header{
+  padding:20px 24px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.panel-body{
+  flex:1;overflow-y:auto;padding:24px;
+}
+.panel-content{
+  font-size:14px;line-height:1.8;color:var(--tm);
+  white-space:pre-wrap;
+}
+.panel-content strong,.panel-content b{color:var(--text);font-weight:600}
+.panel-content h2,.panel-content h3{font-family:'Lora',serif;color:var(--text);font-size:15px;font-weight:600;margin:16px 0 6px}
+
+/* INPUTS */
+.inp{background:var(--bg-w);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;width:100%;outline:none;transition:border-color .18s,box-shadow .18s;resize:none}
+.inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--ad);background:#fff}
+.inp::placeholder{color:var(--ts)}
+.lbl{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--tm);margin-bottom:6px;font-family:'DM Mono',monospace}
+
+/* DROP ZONE */
+.drop{border:2px dashed var(--border-d);border-radius:12px;background:var(--bg-w);cursor:pointer;transition:all .2s}
+.drop:hover,.drop.drag{border-color:var(--acc);background:var(--ad)}
+
+/* DIVIDER */
+.divl{height:1px;background:var(--border);margin:18px 0}
+
+/* BADGES */
+.bdg{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:10px;font-weight:600;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
+.b-blue{background:var(--ad);color:var(--acc)}
+.b-warm{background:var(--wd);color:var(--warm)}
+.b-green{background:var(--gd);color:var(--green)}
+.b-gray{background:rgba(0,0,0,0.05);color:var(--tm)}
+.b-red{background:var(--rd);color:var(--red)}
+
+/* TAB BUTTONS */
+.tab-btn{padding:8px 16px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;transition:all .18s;color:var(--tm);border:none;background:transparent}
+.tab-btn.on{background:var(--acc);color:#fff}
+.tab-btn:not(.on):hover{background:var(--bg-w);color:var(--text)}
+
+/* CHAT */
+.chat-bubble{max-width:85%;padding:11px 15px;border-radius:12px;font-size:14px;line-height:1.65}
+.chat-u{background:var(--acc);color:#fff;border-bottom-right-radius:3px;margin-left:auto}
+.chat-a{background:var(--bg-w);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:3px}
+
+/* SPINNER */
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(26,68,128,0.15);border-top-color:var(--acc);animation:sp .7s linear infinite}
+.spin-lg{width:24px;height:24px;border-width:3px}
+
+/* PW BARS */
+.pw-bar{height:3px;border-radius:99px;transition:all .3s;background:var(--border)}
+
+/* KEYWORD PILLS */
+.kw{display:inline-block;padding:3px 10px;background:var(--bg-w);border:1px solid var(--border-d);border-radius:99px;font-size:11px;color:var(--tm);margin:2px;font-family:'DM Mono',monospace}
+
+/* PROSE for lit review */
+.prose p{color:var(--tm);line-height:1.85;margin-bottom:12px;font-size:14px}
+.prose h2{font-family:'Lora',serif;color:var(--text);font-size:15px;font-weight:600;margin:18px 0 7px}
+.prose strong{color:var(--text)}
+
+/* MOBILE NAV */
+.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(250,250,248,0.96);border-top:1px solid var(--border);z-index:100;padding:8px 0 max(8px,env(safe-area-inset-bottom));backdrop-filter:blur(16px)}
+@media(max-width:768px){.mob-nav{display:flex}.dsk{display:none!important}body{padding-bottom:64px}}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border-d);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ══ SLIDE-OUT PANEL ══ -->
+<div class="panel-overlay" id="panel-overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-header">
+    <div>
+      <p class="mono text-xs mb-1" style="color:var(--tl)" id="panel-label-sub">Section</p>
+      <h3 class="serif font-bold text-xl" id="panel-title">Loading...</h3>
+    </div>
+    <button class="btn btn-o btn-sm" onclick="closePanel()"><i class="fas fa-times mr-1"></i>Close</button>
+  </div>
+  <div class="panel-body">
+    <div id="panel-loading" class="text-center py-12">
+      <div class="spin spin-lg mx-auto mb-4"></div>
+      <p class="text-sm" style="color:var(--tm)">Extracting section...</p>
+    </div>
+    <div id="panel-text" class="panel-content hidden"></div>
+  </div>
+</div>
+
+<!-- ══ NAVBAR ══ -->
+<nav class="nav" style="position:sticky;top:0;z-index:200">
+  <div class="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--acc)">
+        <i class="fas fa-book-open text-white" style="font-size:11px"></i>
+      </div>
+      <span class="serif font-semibold text-lg" style="letter-spacing:-.3px">Research<span style="color:var(--acc)">Mate</span></span>
+    </div>
+    <div class="dsk hidden md:flex items-center gap-1">
+      <button class="tab-btn on" id="nt-home" onclick="goHome()">Upload</button>
+      <button class="tab-btn" id="nt-workspace" onclick="showPg('workspace')" style="display:none">Workspace</button>
+      <button class="tab-btn" id="nt-about" onclick="showPg('about')">About</button>
+    </div>
+    <div class="flex items-center gap-3">
+      <div id="nav-user" class="hidden items-center gap-2">
+        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background:var(--acc)" id="nav-av">A</div>
+        <button class="btn btn-o btn-sm" onclick="logout()">Sign out</button>
+      </div>
+      <div id="nav-auth" class="flex items-center gap-2">
+        <button class="btn btn-o btn-sm" onclick="showPg('login')">Sign in</button>
+        <button class="btn btn-p btn-sm" onclick="showPg('register')">Get started</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ LOGIN ══ -->
+<div id="pg-login" class="pgc" style="min-height:calc(100vh - 56px);align-items:center;justify-content:center;padding:40px 16px;position:relative;z-index:1">
+  <div class="w-full" style="max-width:400px">
+    <div class="text-center mb-8">
+      <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:var(--acc)"><i class="fas fa-book-open text-white text-xl"></i></div>
+      <h1 class="serif text-3xl font-bold mb-2">Welcome back</h1>
+      <p style="color:var(--tm);font-size:14px">Sign in to your ResearchMate account</p>
+    </div>
+    <div class="card p-7" style="box-shadow:var(--sh-md)">
+      <div class="space-y-4">
+        <div><label class="lbl">Email</label><input class="inp" type="email" id="l-em" placeholder="you@university.edu"></div>
+        <div><label class="lbl">Password</label>
+          <div class="relative"><input class="inp" type="password" id="l-pw" placeholder="••••••••" style="padding-right:40px"><button type="button" onclick="togglePw('l-pw','l-eye')" class="absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--tl);background:none;border:none;cursor:pointer;font-size:13px"><i class="fas fa-eye" id="l-eye"></i></button></div>
+        </div>
+        <div id="l-err" class="hidden p-3 rounded-lg text-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca"></div>
+        <button class="btn btn-p w-full" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Sign in</button>
+      </div>
+      <div class="divl"></div>
+      <p class="text-center text-sm" style="color:var(--tm)">No account? <button onclick="showPg('register')" style="color:var(--acc);background:none;border:none;cursor:pointer;font-weight:600;font-family:inherit">Create one free</button></p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REGISTER ══ -->
+<div id="pg-register" class="pgc" style="min-height:calc(100vh - 56px);align-items:center;justify-content:center;padding:40px 16px;position:relative;z-index:1">
+  <div class="w-full" style="max-width:400px">
+    <div class="text-center mb-8">
+      <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:var(--acc)"><i class="fas fa-user-graduate text-white text-xl"></i></div>
+      <h1 class="serif text-3xl font-bold mb-2">Create account</h1>
+      <p style="color:var(--tm);font-size:14px">Your AI research companion awaits</p>
+    </div>
+    <div class="card p-7" style="box-shadow:var(--sh-md)">
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="lbl">First name</label><input class="inp" type="text" id="r-fn" placeholder="Angel"></div>
+          <div><label class="lbl">Last name</label><input class="inp" type="text" id="r-ln" placeholder="Egwaoje"></div>
+        </div>
+        <div><label class="lbl">Email</label><input class="inp" type="email" id="r-em" placeholder="you@university.edu"></div>
+        <div><label class="lbl">Password</label>
+          <div class="relative"><input class="inp" type="password" id="r-pw" placeholder="Min. 8 characters" style="padding-right:40px" oninput="checkPw(this.value)"><button type="button" onclick="togglePw('r-pw','r-eye')" class="absolute right-3 top-1/2 -translate-y-1/2" style="color:var(--tl);background:none;border:none;cursor:pointer;font-size:13px"><i class="fas fa-eye" id="r-eye"></i></button></div>
+          <div class="flex gap-1 mt-2"><div class="pw-bar flex-1" id="pw1"></div><div class="pw-bar flex-1" id="pw2"></div><div class="pw-bar flex-1" id="pw3"></div><div class="pw-bar flex-1" id="pw4"></div></div>
+          <p class="mono text-xs mt-1" id="pwl" style="color:var(--tl)"></p>
+        </div>
+        <div><label class="lbl">Confirm password</label><input class="inp" type="password" id="r-pw2" placeholder="••••••••"></div>
+        <div id="r-err" class="hidden p-3 rounded-lg text-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca"></div>
+        <button class="btn btn-p w-full" onclick="doRegister()"><i class="fas fa-user-plus"></i> Create account</button>
+      </div>
+      <div class="divl"></div>
+      <p class="text-center text-sm" style="color:var(--tm)">Already have an account? <button onclick="showPg('login')" style="color:var(--acc);background:none;border:none;cursor:pointer;font-weight:600;font-family:inherit">Sign in</button></p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HOME ══ -->
+<div id="pg-home" class="pg on" style="position:relative;z-index:1">
+  <div class="max-w-5xl mx-auto px-5 py-16">
+    <div class="text-center mb-14" style="max-width:600px;margin-left:auto;margin-right:auto">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-6" style="background:var(--ad);border:1px solid var(--ab)">
+        <span class="w-1.5 h-1.5 rounded-full" style="background:var(--acc);animation:pl 2s infinite"></span>
+        <span class="mono text-xs" style="color:var(--acc)">Upload · Extract · Chat · Discover</span>
+      </div>
+      <h1 class="serif font-bold mb-5" style="font-size:clamp(2rem,5vw,3rem);letter-spacing:-1px;line-height:1.12">
+        Your AI companion for<br><em style="color:var(--acc)">understanding research</em>
+      </h1>
+      <p style="font-size:16px;color:var(--tm);line-height:1.75">
+        Upload any research paper and instantly extract contributions, methodology, results, limitations, and more — plus chat with the paper, generate literature reviews, and discover related work.
+      </p>
+    </div>
+
+    <div class="card p-8" style="max-width:560px;margin:0 auto;box-shadow:var(--sh-md)">
+      <div class="drop p-12 text-center" id="dz"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)"
+           onclick="document.getElementById('cf').click()">
+        <input type="file" id="cf" accept=".pdf" class="hidden" onchange="handleFile(event)">
+        <div id="dz-def">
+          <div class="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:var(--ad);border:1px solid var(--ab)">
+            <i class="fas fa-file-pdf text-2xl" style="color:var(--acc)"></i>
+          </div>
+          <p class="serif font-semibold text-xl mb-2">Drop your paper here</p>
+          <p class="text-sm mb-5" style="color:var(--tm)">PDF format · Research papers, journal articles, preprints</p>
+          <button class="btn btn-o btn-sm"><i class="fas fa-folder-open mr-2"></i>Browse files</button>
+        </div>
+        <div id="dz-done" class="hidden">
+          <div class="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style="background:var(--gd)">
+            <i class="fas fa-check text-2xl" style="color:var(--green)"></i>
+          </div>
+          <p class="serif font-bold text-lg" style="color:var(--green)" id="fn">paper.pdf</p>
+          <p class="text-sm mt-1" style="color:var(--tm)" id="fs">Ready</p>
+          <button class="btn btn-o btn-sm mt-4" onclick="clearFile(event)"><i class="fas fa-times mr-1"></i>Remove</button>
+        </div>
+      </div>
+      <div id="ul-err" class="hidden mt-4 p-3 rounded-lg text-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca"><i class="fas fa-exclamation-triangle mr-2"></i><span id="ul-em"></span></div>
+      <button class="btn btn-p w-full mt-5" id="ul-btn" onclick="uploadPaper()" style="font-size:15px"><i class="fas fa-arrow-right"></i> Analyse Paper</button>
+    </div>
+
+    <!-- Feature pills -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
+      <div class="card p-5 card-h text-center d1">
+        <div class="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center" style="background:var(--ad)"><i class="fas fa-layer-group" style="color:var(--acc);font-size:13px"></i></div>
+        <p class="serif font-semibold mb-1">Section Extraction</p>
+        <p class="text-xs leading-relaxed" style="color:var(--tm)">Extract contributions, results, limitations and more with one click</p>
+      </div>
+      <div class="card p-5 card-h text-center d2">
+        <div class="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center" style="background:var(--wd)"><i class="fas fa-comments" style="color:var(--warm);font-size:13px"></i></div>
+        <p class="serif font-semibold mb-1">Chat with Paper</p>
+        <p class="text-xs leading-relaxed" style="color:var(--tm)">Ask any question and get answers grounded in the paper</p>
+      </div>
+      <div class="card p-5 card-h text-center d3">
+        <div class="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center" style="background:var(--gd)"><i class="fas fa-scroll" style="color:var(--green);font-size:13px"></i></div>
+        <p class="serif font-semibold mb-1">Literature Review</p>
+        <p class="text-xs leading-relaxed" style="color:var(--tm)">Generate a structured academic review on any topic</p>
+      </div>
+      <div class="card p-5 card-h text-center d4">
+        <div class="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center" style="background:rgba(0,0,0,0.04)"><i class="fas fa-sitemap" style="color:var(--tm);font-size:13px"></i></div>
+        <p class="serif font-semibold mb-1">Related Papers</p>
+        <p class="text-xs leading-relaxed" style="color:var(--tm)">Discover seminal works, datasets and research directions</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOADING ══ -->
+<div id="pg-loading" class="pgc" style="min-height:calc(100vh - 56px);align-items:center;justify-content:center;position:relative;z-index:1">
+  <div class="text-center">
+    <div class="w-20 h-20 rounded-2xl mx-auto mb-8 flex items-center justify-center" style="background:var(--acc);animation:pl 2s infinite">
+      <i class="fas fa-book-open text-white text-3xl"></i>
+    </div>
+    <h2 class="serif font-bold text-3xl mb-3">Reading your paper</h2>
+    <p class="mb-8" style="color:var(--tm)">This takes about 15–20 seconds...</p>
+    <div class="card p-4" style="max-width:300px;margin:0 auto">
+      <div class="flex items-center gap-3"><div class="spin flex-shrink-0"></div><span class="text-sm" id="ls">Parsing PDF...</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WORKSPACE ══ -->
+<div id="pg-workspace" class="pg" style="position:relative;z-index:1">
+  <div class="max-w-5xl mx-auto px-5 py-8">
+
+    <!-- Paper header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-7">
+      <div>
+        <div class="flex flex-wrap items-center gap-2 mb-1.5">
+          <span class="bdg b-blue" id="ws-field">Field</span>
+          <span class="bdg b-gray" id="ws-year">Year</span>
+          <span class="bdg b-warm" id="ws-diff">Level</span>
+        </div>
+        <h2 class="serif font-bold" style="font-size:1.55rem;letter-spacing:-.5px;line-height:1.25" id="ws-title">Paper Title</h2>
+        <p class="text-sm mt-1" style="color:var(--tm)" id="ws-authors">Authors</p>
+      </div>
+      <button class="btn btn-o flex-shrink-0" onclick="goHome()"><i class="fas fa-upload mr-2"></i>New Paper</button>
+    </div>
+
+    <!-- One liner -->
+    <div class="card p-5 mb-6" style="border-left:3px solid var(--acc);border-radius:8px">
+      <p class="serif font-medium text-base leading-relaxed" id="ws-oneliner" style="color:var(--text)"></p>
+    </div>
+
+    <!-- Main layout: sections sidebar + content -->
+    <div class="grid lg:grid-cols-4 gap-5">
+
+      <!-- LEFT: Section extraction buttons -->
+      <div class="lg:col-span-1">
+        <div class="card p-4 sticky top-20">
+          <p class="lbl mb-3">Extract Sections</p>
+          <div class="space-y-2" id="section-buttons">
+            <!-- Injected by JS -->
+          </div>
+          <div class="divl"></div>
+          <p class="text-xs" style="color:var(--tl)">Click any section to extract it. Results slide out on the right.</p>
+        </div>
+      </div>
+
+      <!-- RIGHT: Tabs content -->
+      <div class="lg:col-span-3">
+
+        <!-- Feature tabs -->
+        <div class="flex gap-1 p-1 rounded-xl mb-5" style="background:var(--bg-w);width:fit-content">
+          <button class="tab-btn on" id="t-sum" onclick="swTab('sum')"><i class="fas fa-align-left mr-1.5"></i>Summary</button>
+          <button class="tab-btn" id="t-chat" onclick="swTab('chat')"><i class="fas fa-comments mr-1.5"></i>Chat</button>
+          <button class="tab-btn" id="t-lit" onclick="swTab('lit')"><i class="fas fa-scroll mr-1.5"></i>Lit Review</button>
+          <button class="tab-btn" id="t-rel" onclick="swTab('rel')"><i class="fas fa-sitemap mr-1.5"></i>Related</button>
+        </div>
+
+        <!-- SUMMARY -->
+        <div id="s-sum">
+          <div class="grid sm:grid-cols-2 gap-4 mb-4">
+            <div class="card p-5">
+              <div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--ad)"><i class="fas fa-question" style="color:var(--acc);font-size:10px"></i></div><p class="serif font-semibold text-sm">Problem Statement</p></div>
+              <p class="text-sm leading-relaxed" style="color:var(--tm)" id="s-problem"></p>
+            </div>
+            <div class="card p-5">
+              <div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--gd)"><i class="fas fa-star" style="color:var(--green);font-size:10px"></i></div><p class="serif font-semibold text-sm">Contributions</p></div>
+              <p class="text-sm leading-relaxed" style="color:var(--tm)" id="s-contrib"></p>
+            </div>
+          </div>
+          <div class="card p-5 mb-4">
+            <div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--wd)"><i class="fas fa-flask" style="color:var(--warm);font-size:10px"></i></div><p class="serif font-semibold text-sm">Methodology</p></div>
+            <p class="text-sm leading-relaxed" style="color:var(--tm)" id="s-method"></p>
+          </div>
+          <div class="grid sm:grid-cols-3 gap-4 mb-4">
+            <div class="card p-5 sm:col-span-2">
+              <div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:rgba(0,0,0,0.04)"><i class="fas fa-lightbulb" style="color:var(--tm);font-size:10px"></i></div><p class="serif font-semibold text-sm">Key Findings</p></div>
+              <div class="space-y-2" id="s-findings"></div>
+            </div>
+            <div class="space-y-4">
+              <div class="card p-5">
+                <div class="flex items-center gap-2 mb-3"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--rd)"><i class="fas fa-exclamation-triangle" style="color:var(--red);font-size:10px"></i></div><p class="serif font-semibold text-sm">Limitations</p></div>
+                <p class="text-sm leading-relaxed" style="color:var(--tm)" id="s-limits"></p>
+              </div>
+              <div class="card p-4">
+                <p class="lbl mb-2">Keywords</p>
+                <div id="s-keywords"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card p-5">
+            <p class="lbl mb-2">Recommended for</p>
+            <p class="text-sm leading-relaxed" style="color:var(--tm)" id="s-recfor"></p>
+          </div>
+        </div>
+
+        <!-- CHAT -->
+        <div id="s-chat" class="hidden">
+          <div class="card" style="height:480px;display:flex;flex-direction:column">
+            <div class="flex-1 overflow-y-auto p-5 space-y-4" id="chat-msgs">
+              <div class="flex justify-start">
+                <div class="chat-bubble chat-a"><p class="text-sm"><strong class="serif">Hello!</strong> I've read your paper. Ask me anything — methods, findings, definitions, or anything you're curious about.</p></div>
+              </div>
+            </div>
+            <div class="p-4" style="border-top:1px solid var(--border)">
+              <div class="flex gap-3">
+                <input class="inp flex-1" id="chat-inp" type="text" placeholder="Ask a question about this paper..." onkeydown="if(event.key==='Enter')sendChat()">
+                <button class="btn btn-p px-4" id="chat-btn" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <p class="lbl mb-2">Suggested questions</p>
+            <div class="flex flex-wrap gap-2" id="sq"></div>
+          </div>
+        </div>
+
+        <!-- LIT REVIEW -->
+        <div id="s-lit" class="hidden">
+          <div class="card p-5 mb-4">
+            <div class="flex gap-3">
+              <input class="inp flex-1" id="lit-topic" placeholder="Topic for review (leave blank to use paper's main subject)">
+              <button class="btn btn-p" id="lit-btn" onclick="genLitReview()"><i class="fas fa-scroll mr-2"></i>Generate</button>
+            </div>
+          </div>
+          <div id="lit-loading" class="hidden text-center py-10"><div class="spin spin-lg mx-auto mb-3"></div><p class="text-sm" style="color:var(--tm)">Writing literature review...</p></div>
+          <div id="lit-result" class="hidden"><div class="card p-8"><div class="prose" id="lit-content"></div></div></div>
+        </div>
+
+        <!-- RELATED -->
+        <div id="s-rel" class="hidden">
+          <div id="rel-loading" class="text-center py-14"><div class="spin spin-lg mx-auto mb-3"></div><p class="text-sm" style="color:var(--tm)">Finding related papers...</p></div>
+          <div id="rel-content" class="hidden space-y-5">
+            <div class="card p-5">
+              <div class="flex items-center gap-2 mb-4"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--ad)"><i class="fas fa-landmark" style="color:var(--acc);font-size:10px"></i></div><p class="serif font-semibold">Seminal Works</p></div>
+              <div class="space-y-3" id="rel-sem"></div>
+            </div>
+            <div class="card p-5">
+              <div class="flex items-center gap-2 mb-4"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--gd)"><i class="fas fa-rocket" style="color:var(--green);font-size:10px"></i></div><p class="serif font-semibold">Recent Advances</p></div>
+              <div class="space-y-3" id="rel-rec"></div>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-5">
+              <div class="card p-5">
+                <div class="flex items-center gap-2 mb-4"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--wd)"><i class="fas fa-compass" style="color:var(--warm);font-size:10px"></i></div><p class="serif font-semibold">Research Directions</p></div>
+                <div class="space-y-3" id="rel-dir"></div>
+              </div>
+              <div class="card p-5">
+                <div class="flex items-center gap-2 mb-4"><div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:rgba(0,0,0,0.04)"><i class="fas fa-database" style="color:var(--tm);font-size:10px"></i></div><p class="serif font-semibold">Datasets & Search Terms</p></div>
+                <div class="space-y-2 mb-4" id="rel-ds"></div>
+                <p class="lbl mb-2">Search Terms</p>
+                <div id="rel-terms"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ABOUT ══ -->
+<div id="pg-about" class="pg" style="position:relative;z-index:1">
+  <div class="max-w-3xl mx-auto px-5 py-20">
+    <div class="text-center mb-14">
+      <h2 class="serif font-bold text-4xl mb-4" style="letter-spacing:-.5px">How <span style="color:var(--acc)">ResearchMate</span> works</h2>
+      <p style="color:var(--tm)">Everything you need to understand a paper deeply</p>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-5 mb-10">
+      <div class="card p-6 card-h"><div class="text-3xl mb-3">🔬</div><h3 class="serif font-bold text-lg mb-2">Section Extraction</h3><p class="text-sm leading-relaxed" style="color:var(--tm)">Click any button — Contributions, Methodology, Results, Limitations, Future Work, Conclusion or References — and the content slides out instantly.</p></div>
+      <div class="card p-6 card-h"><div class="text-3xl mb-3">💬</div><h3 class="serif font-bold text-lg mb-2">Chat with Paper</h3><p class="text-sm leading-relaxed" style="color:var(--tm)">Ask any question and get answers grounded in the paper's content. Great for understanding complex methods.</p></div>
+      <div class="card p-6 card-h"><div class="text-3xl mb-3">📜</div><h3 class="serif font-bold text-lg mb-2">Literature Review</h3><p class="text-sm leading-relaxed" style="color:var(--tm)">Generate a structured academic literature review on any topic. Useful for essays and research proposals.</p></div>
+      <div class="card p-6 card-h"><div class="text-3xl mb-3">🔍</div><h3 class="serif font-bold text-lg mb-2">Related Papers</h3><p class="text-sm leading-relaxed" style="color:var(--tm)">Discover seminal works, recent advances, research directions, datasets and search terms to explore the field.</p></div>
+    </div>
+    <div class="text-center"><button class="btn btn-p" onclick="goHome()"><i class="fas fa-arrow-right mr-2"></i>Upload your first paper</button></div>
+  </div>
+</div>
+
+<!-- ══ MOBILE NAV ══ -->
+<nav class="mob-nav">
+  <div class="flex items-center justify-around w-full px-6">
+    <button class="flex flex-col items-center gap-1" onclick="goHome()" style="color:var(--acc);border:none;background:none;cursor:pointer"><i class="fas fa-upload" style="font-size:17px"></i><span style="font-size:11px;font-weight:600">Upload</span></button>
+    <button class="flex flex-col items-center gap-1" id="mb-ws" onclick="showPg('workspace')" style="color:var(--tm);border:none;background:none;cursor:pointer;display:none"><i class="fas fa-flask" style="font-size:17px"></i><span style="font-size:11px;font-weight:600">Workspace</span></button>
+    <button class="flex flex-col items-center gap-1" onclick="showPg('about')" style="color:var(--tm);border:none;background:none;cursor:pointer"><i class="fas fa-info-circle" style="font-size:17px"></i><span style="font-size:11px;font-weight:600">About</span></button>
+  </div>
+</nav>
+
+<script>
+let currentUser=null,currentPaper=null,panelOpen=false;
+
+// ── API BASE URL (works locally and on Render) ──
+const API = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+
+// ── SECTION CONFIG ──
+const SECTIONS=[
+  {key:'contributions', label:'Contributions', icon:'fa-star',       color:'var(--gd)',    ic:'var(--green)'},
+  {key:'methodology',   label:'Methodology',   icon:'fa-flask',      color:'var(--wd)',    ic:'var(--warm)'},
+  {key:'results',       label:'Results & Findings', icon:'fa-chart-bar', color:'var(--ad)', ic:'var(--acc)'},
+  {key:'limitations',   label:'Limitations',   icon:'fa-exclamation-triangle', color:'var(--rd)', ic:'var(--red)'},
+  {key:'future_work',   label:'Future Work',   icon:'fa-compass',    color:'rgba(0,0,0,0.04)', ic:'var(--tm)'},
+  {key:'conclusion',    label:'Conclusion',    icon:'fa-flag-checkered', color:'var(--ad)', ic:'var(--acc)'},
+  {key:'references',    label:'Key References',icon:'fa-book',       color:'var(--gd)',    ic:'var(--green)'},
+];
+
+// ── RENDER SECTION BUTTONS ──
+function renderSectionButtons(){
+  const el=document.getElementById('section-buttons');
+  el.innerHTML=SECTIONS.map(s=>`
+    <button class="sec-btn" id="sbtn-${s.key}" onclick="extractSection('${s.key}','${s.label}')">
+      <div class="sec-btn-ic" style="background:${s.color}"><i class="fas ${s.icon}" style="color:${s.ic}"></i></div>
+      <span class="flex-1">${s.label}</span>
+      <i class="fas fa-chevron-right text-xs" style="color:var(--ts)"></i>
+    </button>`).join('');
+}
+
+// ── PANEL ──
+async function extractSection(key, label){
+  openPanel(label);
+  const btn=document.getElementById('sbtn-'+key);
+  SECTIONS.forEach(s=>{ const b=document.getElementById('sbtn-'+s.key); if(b){b.classList.remove('active');} });
+  if(btn)btn.classList.add('active','loading');
+
+  try{
+    const r=await fetch(API+'/api/extract',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({paper_id:currentPaper.id,section:key})
+    });
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    showPanelContent(d.content);
+  }catch(err){
+    showPanelContent('Error: '+err.message);
+  }finally{
+    if(btn)btn.classList.remove('loading');
+  }
+}
+
+function openPanel(label){
+  panelOpen=true;
+  document.getElementById('panel-title').textContent=label;
+  document.getElementById('panel-label-sub').textContent='Extracted Section';
+  document.getElementById('panel-loading').classList.remove('hidden');
+  document.getElementById('panel-text').classList.add('hidden');
+  document.getElementById('panel-overlay').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function showPanelContent(text){
+  document.getElementById('panel-loading').classList.add('hidden');
+  const el=document.getElementById('panel-text');
+  // Format bold and numbered lists nicely
+  const html=text
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^(\d+\.\s)/gm,'<br><strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  el.innerHTML=html;
+  el.classList.remove('hidden');
+}
+
+function closePanel(){
+  panelOpen=false;
+  document.getElementById('panel-overlay').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+  document.body.style.overflow='';
+  SECTIONS.forEach(s=>{ const b=document.getElementById('sbtn-'+s.key); if(b)b.classList.remove('active'); });
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&panelOpen)closePanel(); });
+
+// ── AUTH ──
+function doRegister(){
+  const fn=v('r-fn'),ln=v('r-ln'),em=v('r-em'),pw=document.getElementById('r-pw').value,pw2=document.getElementById('r-pw2').value;
+  hide('r-err');
+  if(!fn||!ln||!em||!pw)return setErr('r-err','Please fill in all fields.');
+  if(pw.length<8)return setErr('r-err','Password must be at least 8 characters.');
+  if(pw!==pw2)return setErr('r-err','Passwords do not match.');
+  const users=getUsers();
+  if(users[em])return setErr('r-err','An account with this email already exists.');
+  users[em]={firstName:fn,lastName:ln,email:em,password:btoa(pw)};
+  localStorage.setItem('rm_users',JSON.stringify(users));
+  loginUser({firstName:fn,lastName:ln,email:em});
+}
+function doLogin(){
+  const em=v('l-em'),pw=document.getElementById('l-pw').value;
+  hide('l-err');
+  const users=getUsers();
+  if(!users[em]||atob(users[em].password)!==pw)return setErr('l-err','Invalid email or password.');
+  loginUser(users[em]);
+}
+function loginUser(u){currentUser=u;localStorage.setItem('rm_current',JSON.stringify(u));updateNav();showPg('home')}
+function logout(){currentUser=null;localStorage.removeItem('rm_current');updateNav();showPg('login')}
+function updateNav(){
+  const nu=document.getElementById('nav-user'),na=document.getElementById('nav-auth');
+  if(currentUser){nu.classList.remove('hidden');nu.classList.add('flex');na.classList.add('hidden');document.getElementById('nav-av').textContent=currentUser.firstName[0].toUpperCase()}
+  else{nu.classList.add('hidden');nu.classList.remove('flex');na.classList.remove('hidden')}
+}
+function getUsers(){return JSON.parse(localStorage.getItem('rm_users')||'{}')}
+function v(id){return document.getElementById(id).value.trim()}
+function setErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.remove('hidden')}
+function hide(id){document.getElementById(id).classList.add('hidden')}
+
+// ── PASSWORD ──
+function togglePw(id,eid){const i=document.getElementById(id),s=i.type==='password';i.type=s?'text':'password';document.getElementById(eid).className=s?'fas fa-eye-slash':'fas fa-eye'}
+function checkPw(pw){
+  let s=0;if(pw.length>=8)s++;if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^A-Za-z0-9]/.test(pw))s++;
+  const cols=['#dc2626','#2563eb','#2563eb','#16a34a'],lbls=['','Weak','Fair','Good','Strong'];
+  ['pw1','pw2','pw3','pw4'].forEach((b,i)=>{document.getElementById(b).style.background=i<s?cols[s-1]:'var(--border)'});
+  const pl=document.getElementById('pwl');pl.textContent=lbls[s]||'';pl.style.color=s>0?cols[s-1]:'var(--tl)';
+}
+
+// ── PAGES ──
+function showPg(n){
+  document.querySelectorAll('.pg,.pgc').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pg-'+n).classList.add('on');
+  document.querySelectorAll('.tab-btn[id^="nt-"]').forEach(t=>t.classList.remove('on'));
+  const nt=document.getElementById('nt-'+n);if(nt)nt.classList.add('on');
+  window.scrollTo(0,0);
+}
+function goHome(){showPg('home');const t=document.getElementById('nt-home');if(t)t.classList.add('on')}
+
+// ── FILE ──
+let cvFile=null;
+function handleDrop(e){e.preventDefault();document.getElementById('dz').classList.remove('drag');if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0])}
+function handleFile(e){if(e.target.files[0])setFile(e.target.files[0])}
+function setFile(f){cvFile=f;document.getElementById('dz-def').classList.add('hidden');document.getElementById('dz-done').classList.remove('hidden');document.getElementById('fn').textContent=f.name;document.getElementById('fs').textContent=(f.size/1024).toFixed(0)+' KB'}
+function clearFile(e){e.stopPropagation();cvFile=null;document.getElementById('dz-def').classList.remove('hidden');document.getElementById('dz-done').classList.add('hidden');document.getElementById('cf').value=''}
+
+// ── LOADING ──
+const lmsgs=['Parsing PDF...','Extracting text...','Sending to AI...','Analysing structure...','Generating summary...','Almost ready...'];
+let lInt;
+function startLoad(){let i=0;document.getElementById('ls').textContent=lmsgs[0];lInt=setInterval(()=>{i=Math.min(i+1,lmsgs.length-1);document.getElementById('ls').textContent=lmsgs[i]},2000)}
+function stopLoad(){clearInterval(lInt)}
+
+// ── UPLOAD ──
+async function uploadPaper(){
+  if(!cvFile){showUlErr('Please select a PDF file first.');return}
+  hide('ul-err');
+  const btn=document.getElementById('ul-btn');btn.disabled=true;
+  showPg('loading');startLoad();
+  try{
+    const fd=new FormData();fd.append('file',cvFile);
+    const ur=await fetch(API+'/api/upload',{method:'POST',body:fd});
+    const ud=await ur.json();
+    if(!ur.ok||ud.error)throw new Error(ud.error||'Upload failed');
+    currentPaper={id:ud.paper_id,filename:ud.filename};
+    document.getElementById('ls').textContent='Generating summary...';
+    const sr=await fetch(API+'/api/summarise',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paper_id:ud.paper_id})});
+    const sd=await sr.json();
+    if(!sr.ok||sd.error)throw new Error(sd.error||'Summarise failed');
+    stopLoad();
+    renderSummary(sd);
+    renderSectionButtons();
+    document.getElementById('nt-workspace').style.display='block';
+    document.getElementById('mb-ws').style.display='flex';
+    showPg('workspace');
+    fetchRelated();
+  }catch(err){
+    stopLoad();showPg('home');
+    showUlErr('Error: '+err.message+'. Is app.py running?');
+    console.error(err);
+  }finally{btn.disabled=false}
+}
+function showUlErr(m){document.getElementById('ul-em').textContent=m;document.getElementById('ul-err').classList.remove('hidden')}
+
+// ── SUMMARY ──
+function renderSummary(d){
+  setText('ws-title',d.title||'Untitled Paper');
+  setText('ws-authors',d.authors||'');
+  setText('ws-oneliner',d.one_line||'');
+  setText('ws-field',d.field||'Research');
+  setText('ws-year',d.year||'');
+  const dm={'introductory':'b-green','intermediate':'b-blue','advanced':'b-warm'};
+  const de=document.getElementById('ws-diff');de.textContent=d.difficulty||'';de.className='bdg '+(dm[d.difficulty]||'b-gray');
+  setText('s-problem',d.problem||'');
+  setText('s-method',d.methodology||'');
+  setText('s-contrib',d.contributions||'');
+  setText('s-limits',d.limitations||'');
+  setText('s-recfor',d.recommended_for||'');
+  document.getElementById('s-findings').innerHTML=(d.key_findings||[]).map((f,i)=>`<div class="flex gap-2 text-sm leading-relaxed" style="color:var(--tm)"><span class="mono text-xs font-bold flex-shrink-0 mt-0.5" style="color:var(--acc)">${i+1}.</span><span>${f}</span></div>`).join('');
+  document.getElementById('s-keywords').innerHTML=(d.keywords||[]).map(k=>`<span class="kw">${k}</span>`).join('');
+  const qs=['What is the main contribution?','What datasets were used?','What are the key limitations?','How does this compare to prior work?','What future work is suggested?'];
+  document.getElementById('sq').innerHTML=qs.map(q=>`<button onclick="askQ('${q}')" class="btn btn-o btn-sm" style="font-size:12px">${q}</button>`).join('');
+}
+function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val}
+
+// ── TABS ──
+function swTab(t){
+  ['sum','chat','lit','rel'].forEach(tab=>{
+    document.getElementById('s-'+tab).classList.toggle('hidden',tab!==t);
+    document.getElementById('t-'+tab).classList.toggle('on',tab===t);
+  });
+}
+
+// ── CHAT ──
+async function sendChat(){
+  const inp=document.getElementById('chat-inp'),q=inp.value.trim();
+  if(!q||!currentPaper)return;
+  inp.value='';
+  addMsg(q,'u');
+  const btn=document.getElementById('chat-btn');btn.disabled=true;
+  addMsg('...','a','typing');
+  try{
+    const r=await fetch(API+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paper_id:currentPaper.id,question:q})});
+    const d=await r.json();
+    const t=document.getElementById('typing');if(t)t.remove();
+    addMsg(d.error?'Error: '+d.error:d.answer,'a');
+  }catch(err){
+    const t=document.getElementById('typing');if(t)t.remove();
+    addMsg('Error: '+err.message,'a');
+  }finally{btn.disabled=false}
+}
+function addMsg(text,role,id=''){
+  const el=document.getElementById('chat-msgs');
+  const d=document.createElement('div');
+  d.className='flex '+(role==='u'?'justify-end':'justify-start');
+  if(id)d.id=id;
+  d.innerHTML=`<div class="chat-bubble ${role==='u'?'chat-u':'chat-a'}"><p class="text-sm" style="white-space:pre-wrap">${text}</p></div>`;
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+}
+function askQ(q){swTab('chat');document.getElementById('chat-inp').value=q;sendChat()}
+
+// ── LIT REVIEW ──
+async function genLitReview(){
+  if(!currentPaper)return;
+  const topic=document.getElementById('lit-topic').value.trim();
+  const btn=document.getElementById('lit-btn');btn.disabled=true;
+  document.getElementById('lit-loading').classList.remove('hidden');
+  document.getElementById('lit-result').classList.add('hidden');
+  try{
+    const r=await fetch(API+'/api/literature-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paper_id:currentPaper.id,topic})});
+    const d=await r.json();
+    document.getElementById('lit-loading').classList.add('hidden');
+    if(d.error){alert('Error: '+d.error);return}
+    const html=d.review.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'</p><p>').replace(/^/,'<p>').replace(/$/,'</p>');
+    document.getElementById('lit-content').innerHTML=html;
+    document.getElementById('lit-result').classList.remove('hidden');
+  }catch(err){document.getElementById('lit-loading').classList.add('hidden');alert('Error: '+err.message)}
+  finally{btn.disabled=false}
+}
+
+// ── RELATED ──
+async function fetchRelated(){
+  try{
+    const r=await fetch(API+'/api/related-papers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paper_id:currentPaper.id})});
+    const d=await r.json();
+    document.getElementById('rel-loading').classList.add('hidden');
+    if(d.error){document.getElementById('rel-content').innerHTML=`<p style="color:var(--tm)">${d.error}</p>`;document.getElementById('rel-content').classList.remove('hidden');return}
+    renderRelated(d);document.getElementById('rel-content').classList.remove('hidden');
+  }catch(err){document.getElementById('rel-loading').classList.add('hidden');document.getElementById('rel-content').innerHTML='<p style="color:var(--tm)">Could not load related papers.</p>';document.getElementById('rel-content').classList.remove('hidden')}
+}
+function renderRelated(d){
+  const pc=p=>`<div class="p-4 rounded-xl card-h" style="background:var(--bg-w);border:1px solid var(--border)"><p class="serif font-semibold text-sm mb-1">${p.title}</p><p class="mono text-xs mb-2" style="color:var(--tl)">${p.authors||''} ${p.year?'· '+p.year:''}</p><p class="text-xs leading-relaxed" style="color:var(--tm)">${p.why}</p></div>`;
+  document.getElementById('rel-sem').innerHTML=(d.seminal_works||[]).map(pc).join('');
+  document.getElementById('rel-rec').innerHTML=(d.recent_advances||[]).map(pc).join('');
+  document.getElementById('rel-dir').innerHTML=(d.research_directions||[]).map(rd=>`<div class="p-3 rounded-xl" style="background:var(--bg-w);border:1px solid var(--border)"><div class="flex items-center justify-between mb-1"><p class="serif font-semibold text-sm">${rd.direction}</p><span class="bdg ${rd.difficulty==='easy'?'b-green':rd.difficulty==='hard'?'b-warm':'b-blue'}">${rd.difficulty}</span></div><p class="text-xs leading-relaxed" style="color:var(--tm)">${rd.description}</p></div>`).join('');
+  document.getElementById('rel-ds').innerHTML=(d.datasets||[]).map(ds=>`<div class="p-3 rounded-xl" style="background:var(--bg-w);border:1px solid var(--border)"><p class="serif font-semibold text-sm">${ds.url?`<a href="${ds.url}" target="_blank" style="color:var(--acc)">${ds.name}</a>`:ds.name}</p><p class="text-xs leading-relaxed mt-1" style="color:var(--tm)">${ds.description}</p></div>`).join('');
+  document.getElementById('rel-terms').innerHTML=(d.search_terms||[]).map(t=>`<span class="kw">${t}</span>`).join('');
+}
+
+// ── INIT ──
+window.addEventListener('load',()=>{
+  const u=localStorage.getItem('rm_current');
+  if(u){currentUser=JSON.parse(u);updateNav()}
+});
+</script>
+</body>
+</html>
